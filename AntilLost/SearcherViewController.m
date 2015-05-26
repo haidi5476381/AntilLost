@@ -1250,8 +1250,20 @@
         if (_writeCharacteristic != nil)
         {
             uint8_t data = 0x00;
-            [_peripheral writeValue:[NSData dataWithBytes:&data length:1] forCharacteristic:_writeCharacteristic type:CBCharacteristicWriteWithoutResponse];
-
+            double delayInSeconds = 10.0;
+            dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+                __weak typeof(_peripheral)  weakPer= _peripheral;
+            dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+                NSBlockOperation *operation3 = [NSBlockOperation blockOperationWithBlock:^(){
+                    NSLog(@"执行第2次操作，线程：%@", [NSThread currentThread]);
+                    __strong typeof(_peripheral)  strongPer = weakPer;
+                 
+                    
+                    [strongPer writeValue:[NSData dataWithBytes:&data length:1] forCharacteristic:_writeCharacteristic type:CBCharacteristicWriteWithResponse];
+                }];
+                [queue addOperation:operation3];
+//                   [_peripheral writeValue:[NSData dataWithBytes:&data length:1] forCharacteristic:_writeCharacteristic type:CBCharacteristicWriteWithoutResponse];
+            });
         }
 
     }
@@ -1783,6 +1795,9 @@
                 __strong typeof(self)  strongSelf = weakSelf;
                 [strongSelf sendbanding ];
             }];
+//            if (!isSender) {
+//                [self sendbanding];
+//            }
             [queue addOperation:operation1];
             //[self performSelector:@selector(sendbanding) withObject:self afterDelay:0]; // 修改（0） 不一定是里面执行.里面五秒后执行
     
@@ -1906,8 +1921,12 @@
     isSender = YES;
     if (error) {
         NSLog(@"=======%@",error.userInfo);
+        isSender = NO;
     }else{
        
+        if ([characteristic.UUID isEqual:[CBUUID UUIDWithString:@"FFF4"]]) {
+            isSender = YES;
+        }
         NSLog(@"发送数据成功");
     }
 }
